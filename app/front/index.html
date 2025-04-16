@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Rental Service</title>
+	<style>
+		/* Global styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background-color: #f4f7fa;
+    color: #333;
+    line-height: 1.6;
+    font-size: 16px;
+}
+
+h1, h2 {
+    color: #2c3e50;
+}
+
+h1 {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Main layout */
+main {
+    width: 90%;
+    max-width: 1200px;
+    margin: 2rem auto;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+/* Sections */
+section {
+    width: 45%;
+    padding: 1rem;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+section:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Forms */
+form {
+    margin-top: 1rem;
+}
+
+label {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+input, select, button {
+    width: 100%;
+    padding: 0.75rem;
+    margin: 0.5rem 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+
+input[type="date"] {
+    padding: 0.5rem;
+}
+
+button {
+    background-color: #3498db;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #2980b9;
+}
+
+/* Car list styling */
+ul {
+    list-style: none;
+    padding: 0;
+}
+
+li {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+li span {
+    font-weight: bold;
+}
+
+li span.green {
+    color: #27ae60;
+}
+
+li span.red {
+    color: #e74c3c;
+}
+
+/* Loading message */
+.loading {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 1.25rem;
+    color: #2c3e50;
+    background-color: #ecf0f1;
+    padding: 1rem;
+    border-radius: 10px;
+    display: none;
+}
+
+.loading.show {
+    display: block;
+}
+
+/* Media Queries */
+@media (max-width: 768px) {
+    main {
+        flex-direction: column;
+    }
+
+    section {
+        width: 100%;
+    }
+
+    h1 {
+        font-size: 2rem;
+    }
+
+    ul li {
+        font-size: 1rem;
+    }
+}
+
+	</style>
+</head>
+<body>
+	<main>
+		<h1>
+			mbk loc
+		</h1>
+		<section class="loading">
+			<p>Chargement des données...</p>
+		</section>
+		<section>
+			<h2>
+				Voitures disponible
+			</h2>
+			<ul id="carList">
+			</ul>
+		</section>
+		<section>
+			<h2>
+				Louer une voiture
+			</h2>
+			<form id="rentForm" onsubmit="submitRent(event)">
+				<label for="carId">Voiture:</label>
+				<select id="carId" name="carId" required>
+				</select>
+				<br><br>
+				<label for="startDate">Date de début:</label>
+				<input type="date" id="startDate" name="startDate" required>
+				<br><br>
+				<label for="endDate">Date de fin:</label>
+				<input type="date" id="endDate" name="endDate" required>
+				<br><br>
+				<button>Louer</button>
+			</form>
+
+			<h2>
+				Reinitialiser une location
+			</h2>
+			<form id="resetForm" onsubmit="submitReset(event)">
+				<label for="carId">Voiture:</label>
+				<select id="resetCarId" name="carId" required>
+				</select>
+				<br><br>
+				<button>Reinitialiser</button>
+			</form>
+		</section>
+	</main>
+</body>
+<script>
+	let baseURL = 'http://localhost:31380/rentalservice';
+	async function fetchCars() {
+		const data = await fetch(baseURL+'/api/cars')
+			.then(response => response.json())
+			.catch(error => console.error('Error fetching cars:', error));
+		return data.cars;
+	}
+
+	function updateCarList(cars) {
+		const carList = document.getElementById('carList');
+		cars.forEach(car => {
+			const li = document.createElement('li');
+			li.innerHTML = `${car.numberPlate} - ${car.make} ${car.model} -
+							 ${car.rentBegin && car.rentEnd ?
+							 `<span style="color: red;">Loué du ${car.rentBegin} au ${car.rentEnd}</span>` :
+							 '<span style="color: green;">Disponible</span>'}`;
+			li.id = car.numberPlate;
+			carList.appendChild(li);
+		});
+	}
+
+	(async () => {
+		try {
+			await fetch(baseURL+'/api/cars');
+		} catch (error) {
+			console.log('switching to localhost:4000');
+			baseURL = 'http://localhost:4000';
+		}
+
+		const carList = document.getElementById('carList');
+		const carSelect = document.getElementById('carId');
+		const resetCarId = document.getElementById('resetCarId');
+		try {
+			const cars = await fetchCars();
+			document.getElementsByClassName('loading')[0].style.display = 'none';
+			updateCarList(cars);
+			cars.forEach(car => {
+				const option = document.createElement('option');
+				option.value = car.numberPlate;
+				option.textContent = `${car.make} ${car.model} (${car.numberPlate})`;
+				carSelect.appendChild(option);
+				resetCarId.appendChild(option.cloneNode(true));
+			});
+		} catch (error) {
+			console.error('Error:', error);
+		}
+	})();
+
+	async function submitRent(event) {
+		event.preventDefault();
+		const carId = document.getElementById('carId').value;
+		const startDate = document.getElementById('startDate').value;
+		const endDate = document.getElementById('endDate').value;
+
+		if (new Date(startDate) > new Date(endDate)) {
+			alert('La date de début doit être inférieure à la date de fin.');
+			return;
+		}
+
+		if (!startDate || !endDate) {
+			alert('Veuillez remplir toutes les dates.');
+			return;
+		}
+
+		fetch(baseURL+'/api/cars/'+carId, {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				rentBegin: startDate,
+				rentEnd: endDate
+			})
+		}).then(response => response.json())
+		.then(data => {
+			let car = data.car;
+			const li = document.getElementById(car.numberPlate);
+			li.innerHTML = `${car.numberPlate} - ${car.make} ${car.model} -
+							 ${car.rentBegin && car.rentEnd ?
+							 `<span style="color: red;">Loué du ${car.rentBegin} au ${car.rentEnd}</span>` :
+							 '<span style="color: green;">Disponible</span>'}`;
+			li.id = car.numberPlate;
+			carList.appendChild(li);
+			document.getElementById('rentForm').reset();
+		})
+	}
+
+	function submitReset(event) {
+		event.preventDefault();
+		const carId = document.getElementById('resetCarId').value;
+
+		fetch(baseURL+'/api/cars/'+carId, {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				rentBegin: null,
+				rentEnd: null
+			})
+		}).then(response => response.json())
+		.then(data => {
+			let car = data.car;
+			const li = document.getElementById(car.numberPlate);
+			li.innerHTML = `${car.numberPlate} - ${car.make} ${car.model} -
+							 ${car.rentBegin && car.rentEnd ?
+							 `<span style="color: red;">Loué du ${car.rentBegin} au ${car.rentEnd}</span>` :
+							 '<span style="color: green;">Disponible</span>'}`;
+			li.id = car.numberPlate;
+			carList.appendChild(li);
+			document.getElementById('resetForm').reset();
+		})
+
+	}
+</script>
+</html>

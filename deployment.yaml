@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rentalservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rentalservice
+  template:
+    metadata:
+      labels:
+        app: rentalservice
+    spec:
+      containers:
+        - name: rentalservice
+          image: mabrouk148/rentalservice:1.0.0
+          ports:
+            - containerPort: 4000
